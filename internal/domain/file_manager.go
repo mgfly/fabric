@@ -82,7 +82,7 @@ func ParseFileChanges(output string) (changeSummary string, changes []FileChange
 			return changeSummary, nil, fmt.Errorf(i18n.T("file_manager_empty_path"), i)
 		}
 
-		if strings.Contains(change.Path, "..") || filepath.IsAbs(change.Path) {
+		if !filepath.IsLocal(change.Path) {
 			return changeSummary, nil, fmt.Errorf(i18n.T("file_manager_suspicious_path"), i, change.Path)
 		}
 
@@ -153,24 +153,12 @@ func fixInvalidEscapes(jsonStr string) string {
 
 // ApplyFileChanges applies the parsed file changes to the file system
 func ApplyFileChanges(projectRoot string, changes []FileChange) error {
-	absProjectRoot, err := filepath.Abs(projectRoot)
-	if err != nil {
-		return fmt.Errorf("failed to resolve project root: %w", err)
-	}
-	absProjectRoot = filepath.Clean(absProjectRoot)
-
 	for i, change := range changes {
-		if filepath.IsAbs(change.Path) {
+		if !filepath.IsLocal(change.Path) {
 			return fmt.Errorf(i18n.T("file_manager_suspicious_path"), i, change.Path)
 		}
 
-		absPath := filepath.Clean(filepath.Join(absProjectRoot, change.Path))
-
-		// Make sure that the cleaned path stays inside the project root.
-		rel, err := filepath.Rel(absProjectRoot, absPath)
-		if err != nil || strings.HasPrefix(rel, "..") {
-			return fmt.Errorf(i18n.T("file_manager_suspicious_path"), i, change.Path)
-		}
+		absPath := filepath.Join(projectRoot, change.Path)
 
 		dir := filepath.Dir(absPath)
 		if err := os.MkdirAll(dir, 0755); err != nil {
