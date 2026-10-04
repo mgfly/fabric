@@ -378,7 +378,7 @@ func TestNewOllamaEngine_APIKeyWiring(t *testing.T) {
 		return w.Code
 	}
 
-	withKey := newOllamaEngine(registry, ":0", "test-version", "secret")
+	withKey := newOllamaEngine(registry, ":0", "test-version", "secret", nil)
 	if code := getVersion(withKey, ""); code != http.StatusUnauthorized {
 		t.Fatalf("no key presented: got %d, want 401", code)
 	}
@@ -386,7 +386,7 @@ func TestNewOllamaEngine_APIKeyWiring(t *testing.T) {
 		t.Fatalf("valid key presented: got %d, want 200", code)
 	}
 
-	withoutKey := newOllamaEngine(registry, ":0", "test-version", "")
+	withoutKey := newOllamaEngine(registry, ":0", "test-version", "", nil)
 	if code := getVersion(withoutKey, ""); code != http.StatusOK {
 		t.Fatalf("no key configured: got %d, want 200", code)
 	}
@@ -587,6 +587,34 @@ func TestOllamaChat_StreamUpstreamErrorEvent(t *testing.T) {
 	}
 	if !strings.Contains(last.Message.Content, "boom") || last.Message.Content == "boom" {
 		t.Fatalf("last chunk content is not the prefixed error: %q", last.Message.Content)
+	}
+}
+
+// A non-2xx upstream status in stream mode must still set the NDJSON
+// Content-Type, so the client parses the error chunk as NDJSON and not
+// as whatever Go's content sniffer guesses for a JSON-shaped body.
+func TestOllamaChat_StreamUpstreamNon2xxSetsNDJSONContentType(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	upstream := gin.New()
+	upstream.POST("/chat", func(c *gin.Context) {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "boom"})
+	})
+	server := httptest.NewServer(upstream)
+	defer server.Close()
+
+	r := gin.New()
+	conv := APIConvert{addr: &server.URL}
+	r.POST("/api/chat", conv.ollamaChat)
+
+	w := httptest.NewRecorder()
+	body := `{"model":"test:latest","stream":true,"messages":[{"role":"user","content":"hi"}]}`
+	req := httptest.NewRequest(http.MethodPost, "/api/chat", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if got := w.Header().Get("Content-Type"); got != "application/x-ndjson" {
+		t.Fatalf("Content-Type = %q, want application/x-ndjson", got)
 	}
 }
 
