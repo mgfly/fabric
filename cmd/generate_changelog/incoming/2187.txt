@@ -1,0 +1,7 @@
+### PR [#2187](https://github.com/danielmiessler/Fabric/pull/2187) by [moritzschmitz-oviva](https://github.com/moritzschmitz-oviva): feat: add Eisenhower Matrix prioritization pattern
+
+- Added a new Eisenhower Matrix prioritization pattern for task triage and decision-making.
+- Renamed the pattern from `eisenhower` to `eisenhower_matrix` and removed the old pattern directory.
+- Relocated the Eisenhower Matrix pattern into `data/patterns`.
+- Registered the pattern's description and metadata with the BUSINESS, SELF, and STRATEGY tags.
+- Added task classification and a weekly planning extract to the pattern.
