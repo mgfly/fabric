@@ -1,3 +1,0 @@
-### PR [#2258](https://github.com/danielmiessler/Fabric/pull/2258) by [JuampiHernandez](https://github.com/JuampiHernandez): feat: add Firecrawl web search via --firecrawl_search flag
-
-- Feat: add Firecrawl web search via --firecrawl_search flag
