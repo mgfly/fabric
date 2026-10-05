@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.4.512 (2026-10-05)
+
+### PR [#2257](https://github.com/danielmiessler/Fabric/pull/2257) by [ksylvan](https://github.com/ksylvan): feat: add DemonRoute as an OpenAI-compatible AI provider
+
+- Added DemonRoute as an OpenAI-compatible AI provider.
+- Registered DemonRoute with its OpenAI-compatible API base URL.
+- Added DemonRoute to the README’s list of supported AI providers.
+
 ## v1.4.511 (2026-10-04)
 
 ### PR [#2107](https://github.com/danielmiessler/Fabric/pull/2107) by [johnpippett](https://github.com/johnpippett): Security: fix remote file write and shell injection in template extensions
