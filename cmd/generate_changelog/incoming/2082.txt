@@ -1,4 +1,4 @@
-### PR [#2082](https://github.com/danielmiessler/Fabric/pull/2082) by [cp89cyber](https://github.com/cp89cyber): Add `--print-prompt` prompt export mode
+### PR [#2082](https://github.com/danielmiessler/Fabric/pull/2082) by [cp89cyber](https://github.com/cp89cyber) and by [ksylvan](https://github.com/ksylvan): Add `--print-prompt` prompt export mode
 
 - Added a new `--print-prompt` flag that renders the composed chat messages and exits without calling a model.
 - Reused the shared message formatting logic so dry-run and prompt export produce consistent output.
