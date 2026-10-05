@@ -31,6 +31,12 @@ type Chatter struct {
 	vendor             ai.Vendor
 }
 
+// NewChatter returns a Chatter without a vendor, for BuildSession only.
+// Use GetChatter to get a Chatter that can Send.
+func NewChatter(db *fsdb.Db) *Chatter {
+	return &Chatter{db: db}
+}
+
 // recordFirstStreamError sends err to errChan when the channel has space. It discards later errors.
 func recordFirstStreamError(errChan chan error, err error) {
 	if err == nil {
@@ -57,13 +63,18 @@ func joinPromptSections(parts ...string) string {
 	return strings.Join(sections, "\n")
 }
 
+// NeedsRawMode tells if the vendor needs raw mode for the model.
+// It tests o.model, not opts.Model. GetChatter sets o.model to the vendor's spelling of the name.
+func (o *Chatter) NeedsRawMode() bool {
+	return o.vendor != nil && o.vendor.NeedsRawMode(o.model)
+}
+
 // Send processes a chat request and applies file changes for create_coding_feature pattern
 func (o *Chatter) Send(ctx context.Context, request *domain.ChatRequest, opts *domain.ChatOptions) (session *fsdb.Session, err error) {
-	// Test o.model, not opts.Model. GetChatter set o.model to the vendor's spelling of the name.
-	if o.vendor.NeedsRawMode(o.model) {
+	if o.NeedsRawMode() {
 		opts.Raw = true
 	}
-	if session, err = o.BuildSession(request, opts.Raw); err != nil {
+	if session, err = o.BuildSession(request, opts.Raw, true); err != nil {
 		return
 	}
 
@@ -224,10 +235,12 @@ func (o *Chatter) Send(ctx context.Context, request *domain.ChatRequest, opts *d
 	return
 }
 
-func (o *Chatter) BuildSession(request *domain.ChatRequest, raw bool) (session *fsdb.Session, err error) {
+// BuildSession prints a notice for a new named session when announceNewSession is true.
+func (o *Chatter) BuildSession(
+	request *domain.ChatRequest, raw bool, announceNewSession bool) (session *fsdb.Session, err error) {
 	if request.SessionName != "" {
 		var sess *fsdb.Session
-		if sess, err = o.db.Sessions.Get(request.SessionName); err != nil {
+		if sess, err = o.db.Sessions.GetWithNotice(request.SessionName, announceNewSession); err != nil {
 			err = fmt.Errorf(i18n.T("chatter_error_find_session"), request.SessionName, err)
 			return
 		}

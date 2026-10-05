@@ -21,19 +21,7 @@ func handleChatProcessing(currentFlags *Flags, registry *core.PluginRegistry, me
 	if messageTools != "" {
 		currentFlags.AppendMessage(messageTools)
 	}
-	// FABRIC_MODEL_<PATTERN> sets a "vendor|model" pair or a model name for one pattern.
-	if currentFlags.Pattern != "" && currentFlags.Model == "" {
-		envVar := "FABRIC_MODEL_" + strings.ToUpper(strings.ReplaceAll(currentFlags.Pattern, "-", "_"))
-		if modelSpec := os.Getenv(envVar); modelSpec != "" {
-			parts := strings.SplitN(modelSpec, "|", 2)
-			if len(parts) == 2 {
-				currentFlags.Vendor = parts[0]
-				currentFlags.Model = parts[1]
-			} else {
-				currentFlags.Model = modelSpec
-			}
-		}
-	}
+	applyPatternModel(currentFlags)
 
 	var chatter *core.Chatter
 	if chatter, err = registry.GetChatter(currentFlags.Model, currentFlags.ModelContextLength,
@@ -142,6 +130,24 @@ func handleChatProcessing(currentFlags *Flags, registry *core.PluginRegistry, me
 	}
 
 	return
+}
+
+// applyPatternModel applies FABRIC_MODEL_<PATTERN> when no model is set.
+// The value is a "vendor|model" pair or a model name for one pattern.
+func applyPatternModel(currentFlags *Flags) {
+	if currentFlags.Pattern == "" || currentFlags.Model != "" {
+		return
+	}
+	envVar := "FABRIC_MODEL_" + strings.ToUpper(strings.ReplaceAll(currentFlags.Pattern, "-", "_"))
+	if modelSpec := os.Getenv(envVar); modelSpec != "" {
+		parts := strings.SplitN(modelSpec, "|", 2)
+		if len(parts) == 2 {
+			currentFlags.Vendor = parts[0]
+			currentFlags.Model = parts[1]
+		} else {
+			currentFlags.Model = modelSpec
+		}
+	}
 }
 
 // sendNotification runs the custom notification command, or the built-in notifier when none is set.
