@@ -81,17 +81,14 @@ func TestRenderPromptExport(t *testing.T) {
 			}
 			registry := &core.PluginRegistry{Db: db, Language: langtool.NewLanguage()}
 
-			// Capture stdout. A missing session must not print the new-session notice.
-			oldStdout := os.Stdout
-			r, w, err := os.Pipe()
-			must(t, err)
-			os.Stdout = w
-			got, err := renderPromptExport(&tt.flags, registry, "meta", tt.tools)
-			os.Stdout = oldStdout
-			must(t, w.Close())
-			printed, _ := io.ReadAll(r)
+			// A missing session must not print the new-session notice.
+			var got string
+			printed := captureStdout(t, func() {
+				var err error
+				got, err = renderPromptExport(&tt.flags, registry, "meta", tt.tools)
+				must(t, err)
+			})
 
-			must(t, err)
 			if got != tt.want {
 				t.Fatalf("renderPromptExport() = %q, want %q", got, tt.want)
 			}
@@ -108,6 +105,58 @@ func TestRenderPromptExport(t *testing.T) {
 	}
 }
 
+func TestHandlePromptExport(t *testing.T) {
+	db := fsdb.NewDb(t.TempDir())
+	must(t, os.WriteFile(db.EnvFilePath, nil, 0o644))
+	must(t, db.Configure())
+	registry := &core.PluginRegistry{Db: db, Language: langtool.NewLanguage()}
+	const want = "User:\nhello\n\n"
+
+	t.Run("not handled", func(t *testing.T) {
+		handled, err := handlePromptExport(&Flags{Message: "hello"}, registry, "")
+		if handled || err != nil {
+			t.Fatalf("got handled=%v err=%v, want false, nil", handled, err)
+		}
+	})
+
+	t.Run("stdout", func(t *testing.T) {
+		printed := captureStdout(t, func() {
+			handled, err := handlePromptExport(&Flags{PrintPrompt: true, Message: "hello"}, registry, "")
+			must(t, err)
+			if !handled {
+				t.Fatal("expected handled")
+			}
+		})
+		if string(printed) != want {
+			t.Fatalf("stdout = %q, want %q", printed, want)
+		}
+	})
+
+	t.Run("output file", func(t *testing.T) {
+		out := filepath.Join(t.TempDir(), "prompt.txt")
+		printed := captureStdout(t, func() {
+			_, err := handlePromptExport(&Flags{PrintPrompt: true, Message: "hello", Output: out}, registry, "")
+			must(t, err)
+		})
+		if len(printed) != 0 {
+			t.Fatalf("expected no stdout output, got %q", printed)
+		}
+		data, err := os.ReadFile(out)
+		must(t, err)
+		if string(data) != want {
+			t.Fatalf("file = %q, want %q", data, want)
+		}
+	})
+
+	t.Run("output file in missing directory", func(t *testing.T) {
+		out := filepath.Join(t.TempDir(), "missing", "prompt.txt")
+		handled, err := handlePromptExport(&Flags{PrintPrompt: true, Message: "hello", Output: out}, registry, "")
+		if !handled || err == nil {
+			t.Fatalf("got handled=%v err=%v, want true and an error", handled, err)
+		}
+	})
+}
+
 func TestValidatePromptExportFlags(t *testing.T) {
 	for name, flags := range map[string]*Flags{
 		"dry run":        {PrintPrompt: true, DryRun: true},
@@ -118,6 +167,21 @@ func TestValidatePromptExportFlags(t *testing.T) {
 			t.Errorf("%s: expected validation error", name)
 		}
 	}
+}
+
+// captureStdout runs fn and returns what it writes to stdout.
+func captureStdout(t *testing.T, fn func()) []byte {
+	t.Helper()
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	must(t, err)
+	os.Stdout = w
+	defer func() { os.Stdout = oldStdout }()
+	fn()
+	must(t, w.Close())
+	printed, err := io.ReadAll(r)
+	must(t, err)
+	return printed
 }
 
 func must(t *testing.T, err error) {
