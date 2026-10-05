@@ -40,6 +40,9 @@ func validatePromptExportFlags(currentFlags *Flags) error {
 	if currentFlags.OutputSession {
 		return fmt.Errorf("%s", i18n.T("print_prompt_error_output_session"))
 	}
+	if currentFlags.Workflow != "" {
+		return fmt.Errorf("%s", i18n.T("print_prompt_error_workflow"))
+	}
 	return nil
 }
 

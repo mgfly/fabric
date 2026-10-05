@@ -309,6 +309,13 @@ func TestValidatePromptExportFlags(t *testing.T) {
 				OutputSession: true,
 			},
 		},
+		{
+			name: "workflow incompatible",
+			flags: &Flags{
+				PrintPrompt: true,
+				Workflow:    "wf",
+			},
+		},
 	}
 
 	for _, tt := range tests {
