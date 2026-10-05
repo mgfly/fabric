@@ -381,6 +381,7 @@ Fabric supports a wide range of AI providers:
 - OpenCode Go
 - OpenCode Zen
 - OpenRouter
+- Opper
 - OrcaRouter
 - Pzero
 - Requesty
