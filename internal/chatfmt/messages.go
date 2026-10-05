@@ -7,35 +7,32 @@ import (
 	"github.com/danielmiessler/fabric/internal/chat"
 )
 
+// FormatMessages writes each message as a role header line and its content.
+// --dry-run and --print-prompt use this format.
 func FormatMessages(msgs []*chat.ChatCompletionMessage) string {
 	var builder strings.Builder
 
 	for _, msg := range msgs {
-		builder.WriteString(FormatMessage(msg))
-	}
-
-	return builder.String()
-}
-
-func FormatMessage(msg *chat.ChatCompletionMessage) string {
-	var builder strings.Builder
-	header := roleHeader(msg.Role)
-
-	if len(msg.MultiContent) > 0 {
-		builder.WriteString(fmt.Sprintf("%s:\n", header))
+		header := roleHeader(msg.Role)
+		if len(msg.MultiContent) == 0 {
+			fmt.Fprintf(&builder, "%s:\n%s\n\n", header, msg.Content)
+			continue
+		}
+		fmt.Fprintf(&builder, "%s:\n", header)
 		for _, part := range msg.MultiContent {
-			builder.WriteString(fmt.Sprintf("  - Type: %s\n", part.Type))
-			if part.Type == chat.ChatMessagePartTypeImageURL && part.ImageURL != nil {
-				builder.WriteString(fmt.Sprintf("    Image URL: %s\n", part.ImageURL.URL))
-				continue
+			fmt.Fprintf(&builder, "  - Type: %s\n", part.Type)
+			switch {
+			case part.Type != chat.ChatMessagePartTypeImageURL:
+				fmt.Fprintf(&builder, "    Text: %s\n", part.Text)
+			case part.ImageURL == nil:
+				builder.WriteString("    Image URL: <missing>\n")
+			default:
+				fmt.Fprintf(&builder, "    Image URL: %s\n", part.ImageURL.URL)
 			}
-			builder.WriteString(fmt.Sprintf("    Text: %s\n", part.Text))
 		}
 		builder.WriteString("\n")
-		return builder.String()
 	}
 
-	builder.WriteString(fmt.Sprintf("%s:\n%s\n\n", header, msg.Content))
 	return builder.String()
 }
 

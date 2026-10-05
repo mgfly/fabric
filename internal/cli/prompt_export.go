@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -35,13 +36,13 @@ func handlePromptExport(
 
 func validatePromptExportFlags(currentFlags *Flags) error {
 	if currentFlags.DryRun {
-		return fmt.Errorf("%s", i18n.T("print_prompt_error_dry_run"))
+		return errors.New(i18n.T("print_prompt_error_dry_run"))
 	}
 	if currentFlags.OutputSession {
-		return fmt.Errorf("%s", i18n.T("print_prompt_error_output_session"))
+		return errors.New(i18n.T("print_prompt_error_output_session"))
 	}
 	if currentFlags.Workflow != "" {
-		return fmt.Errorf("%s", i18n.T("print_prompt_error_workflow"))
+		return errors.New(i18n.T("print_prompt_error_workflow"))
 	}
 	if currentFlags.Output != "" && IsAudioFormat(currentFlags.Output) {
 		return fmt.Errorf(i18n.T("print_prompt_error_audio_output"), currentFlags.Output)

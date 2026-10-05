@@ -47,3 +47,17 @@ func TestFormatMessagesMultiContent(t *testing.T) {
 		t.Fatalf("FormatMessages() = %q, want %q", got, want)
 	}
 }
+
+func TestFormatMessagesNilImageURL(t *testing.T) {
+	msgs := []*chat.ChatCompletionMessage{{
+		Role:         chat.ChatMessageRoleUser,
+		MultiContent: []chat.ChatMessagePart{{Type: chat.ChatMessagePartTypeImageURL}},
+	}}
+
+	got := FormatMessages(msgs)
+	want := "User:\n  - Type: image_url\n    Image URL: <missing>\n\n"
+
+	if got != want {
+		t.Fatalf("FormatMessages() = %q, want %q", got, want)
+	}
+}

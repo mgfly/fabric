@@ -31,6 +31,8 @@ type Chatter struct {
 	vendor             ai.Vendor
 }
 
+// NewChatter returns a Chatter without a vendor, for BuildSession only.
+// Use GetChatter to get a Chatter that can Send.
 func NewChatter(db *fsdb.Db) *Chatter {
 	return &Chatter{db: db}
 }
