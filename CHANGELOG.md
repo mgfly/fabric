@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.4.515 (2026-10-05)
+
+### PR [#2260](https://github.com/danielmiessler/Fabric/pull/2260) by [Felixkw12](https://github.com/Felixkw12): feat: add Opper as an OpenAI-compatible provider
+
+- Added Opper as an OpenAI-compatible provider, registered in the ProviderMap with the base URL `https://api.opper.ai/v3/compat`.
+- Listed Opper in the OpenAI-Compatible Providers section of README.md and README.zh.md.
+- Added a matching `TestCreateClient` test case.
+
 ## v1.4.514 (2026-10-05)
 
 ### PR [#2082](https://github.com/danielmiessler/Fabric/pull/2082) by [cp89cyber](https://github.com/cp89cyber) and by [ksylvan](https://github.com/ksylvan): Add `--print-prompt` prompt export mode
