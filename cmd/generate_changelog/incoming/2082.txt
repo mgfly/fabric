@@ -5,3 +5,4 @@
 - Added validation, documentation, and tests for the new prompt export mode.
 - Rejected `--print-prompt` when combined with `--workflow`, returning an error consistent with `--dry-run` and `--output-session`.
 - Translated the `--print-prompt` help text and error messages across all 11 non-English locales.
+- Changed the `--dry-run` role headers from lowercase (`user:`, `assistant:`) to capitalized (`User:`, `Assistant:`) to match the prompt export format.
