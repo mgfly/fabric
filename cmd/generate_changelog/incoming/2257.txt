@@ -1,0 +1,5 @@
+### PR [#2257](https://github.com/danielmiessler/Fabric/pull/2257) by [ksylvan](https://github.com/ksylvan): feat: add DemonRoute as an OpenAI-compatible AI provider
+
+- Added DemonRoute as an OpenAI-compatible AI provider.
+- Registered DemonRoute with its OpenAI-compatible API base URL.
+- Added DemonRoute to the README’s list of supported AI providers.
