@@ -67,7 +67,7 @@ func (o *Chatter) Send(ctx context.Context, request *domain.ChatRequest, opts *d
 	if o.vendor.NeedsRawMode(o.model) {
 		opts.Raw = true
 	}
-	if session, err = o.BuildSession(request, opts.Raw); err != nil {
+	if session, err = o.BuildSession(request, opts.Raw, true); err != nil {
 		return
 	}
 
@@ -228,15 +228,8 @@ func (o *Chatter) Send(ctx context.Context, request *domain.ChatRequest, opts *d
 	return
 }
 
-func (o *Chatter) BuildSession(request *domain.ChatRequest, raw bool) (session *fsdb.Session, err error) {
-	return o.buildSession(request, raw, true)
-}
-
-func (o *Chatter) BuildSessionQuiet(request *domain.ChatRequest, raw bool) (session *fsdb.Session, err error) {
-	return o.buildSession(request, raw, false)
-}
-
-func (o *Chatter) buildSession(
+// BuildSession prints a notice for a new named session when announceNewSession is true.
+func (o *Chatter) BuildSession(
 	request *domain.ChatRequest, raw bool, announceNewSession bool) (session *fsdb.Session, err error) {
 	if request.SessionName != "" {
 		var sess *fsdb.Session

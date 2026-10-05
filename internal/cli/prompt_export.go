@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"strings"
 
@@ -11,14 +10,11 @@ import (
 	"github.com/danielmiessler/fabric/internal/i18n"
 )
 
+// handlePromptExport prints the rendered prompt. Cli validates the flags before it calls this function.
 func handlePromptExport(
 	currentFlags *Flags, registry *core.PluginRegistry, messageTools string) (handled bool, err error) {
 	if !currentFlags.PrintPrompt {
 		return false, nil
-	}
-
-	if err = validatePromptExportFlags(currentFlags); err != nil {
-		return true, err
 	}
 
 	var prompt string
@@ -26,11 +22,15 @@ func handlePromptExport(
 		return true, err
 	}
 
-	if err = outputPromptExport(prompt, currentFlags.Output, currentFlags.Copy, os.Stdout, CopyToClipboard); err != nil {
+	if currentFlags.Output == "" {
+		fmt.Print(prompt)
+	} else if err = CreateOutputFile(prompt, currentFlags.Output); err != nil {
 		return true, err
 	}
-
-	return true, nil
+	if currentFlags.Copy {
+		err = CopyToClipboard(prompt)
+	}
+	return true, err
 }
 
 func validatePromptExportFlags(currentFlags *Flags) error {
@@ -48,10 +48,6 @@ func validatePromptExportFlags(currentFlags *Flags) error {
 
 func renderPromptExport(
 	currentFlags *Flags, registry *core.PluginRegistry, meta string, messageTools string) (string, error) {
-	if registry == nil || registry.Db == nil {
-		return "", fmt.Errorf("registry database not initialized")
-	}
-
 	flagsCopy := *currentFlags
 	if messageTools != "" {
 		flagsCopy.Message = AppendMessage(flagsCopy.Message, messageTools)
@@ -62,45 +58,14 @@ func renderPromptExport(
 		return "", err
 	}
 
-	if chatReq.Language == "" &&
-		registry.Language != nil &&
-		registry.Language.DefaultLanguage != nil {
+	if chatReq.Language == "" {
 		chatReq.Language = registry.Language.DefaultLanguage.Value
 	}
 
-	chatter := core.NewChatter(registry.Db)
-	session, err := chatter.BuildSessionQuiet(chatReq, currentFlags.Raw)
+	session, err := core.NewChatter(registry.Db).BuildSession(chatReq, currentFlags.Raw, false)
 	if err != nil {
 		return "", err
 	}
 
 	return chatfmt.FormatMessages(session.GetVendorMessages()), nil
-}
-
-func outputPromptExport(
-	prompt string,
-	outputPath string,
-	copy bool,
-	stdout io.Writer,
-	copyToClipboard func(string) error,
-) error {
-	if outputPath == "" {
-		outputText := prompt
-		if !strings.HasSuffix(outputText, "\n") {
-			outputText += "\n"
-		}
-		if _, err := io.WriteString(stdout, outputText); err != nil {
-			return err
-		}
-	} else {
-		if err := CreateOutputFile(prompt, outputPath); err != nil {
-			return err
-		}
-	}
-
-	if copy {
-		return copyToClipboard(prompt)
-	}
-
-	return nil
 }

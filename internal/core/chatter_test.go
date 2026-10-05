@@ -234,7 +234,7 @@ func TestChatter_BuildSession_SeparatesSystemSections(t *testing.T) {
 		},
 	}
 
-	session, err := chatter.BuildSession(request, false)
+	session, err := chatter.BuildSession(request, false, true)
 	if err != nil {
 		t.Fatalf("BuildSession returned error: %v", err)
 	}
@@ -298,7 +298,7 @@ func TestChatter_BuildSession_EndsWithUserMessage(t *testing.T) {
 				PatternName: tt.pattern,
 				Message:     &chat.ChatCompletionMessage{Role: chat.ChatMessageRoleUser, Content: tt.input},
 			}
-			session, err := (&Chatter{db: db}).BuildSession(request, tt.raw)
+			session, err := (&Chatter{db: db}).BuildSession(request, tt.raw, true)
 			if err != nil {
 				t.Fatal(err)
 			}

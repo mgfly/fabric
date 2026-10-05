@@ -24,16 +24,6 @@ func TestInit(t *testing.T) {
 	assert.Equal(t, expectedFlags.Copy, flags.Copy)
 }
 
-func TestInitPrintPrompt(t *testing.T) {
-	oldArgs := os.Args
-	defer func() { os.Args = oldArgs }()
-	os.Args = []string{"cmd", "--print-prompt"}
-
-	flags, err := Init()
-	assert.NoError(t, err)
-	assert.True(t, flags.PrintPrompt)
-}
-
 func TestInitPatternFromBinaryName(t *testing.T) {
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()

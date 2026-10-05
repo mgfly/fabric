@@ -39,21 +39,10 @@ func FormatMessage(msg *chat.ChatCompletionMessage) string {
 	return builder.String()
 }
 
+// roleHeader changes the first letter of the role to uppercase, for example "user" to "User".
 func roleHeader(role string) string {
-	switch role {
-	case chat.ChatMessageRoleSystem:
-		return "System"
-	case chat.ChatMessageRoleUser:
-		return "User"
-	case chat.ChatMessageRoleAssistant:
-		return "Assistant"
-	case chat.ChatMessageRoleDeveloper:
-		return "Developer"
-	case chat.ChatMessageRoleTool:
-		return "Tool"
-	case chat.ChatMessageRoleFunction:
-		return "Function"
-	default:
+	if role == "" {
 		return role
 	}
+	return strings.ToUpper(role[:1]) + role[1:]
 }
