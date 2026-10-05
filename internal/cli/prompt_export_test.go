@@ -162,6 +162,7 @@ func TestValidatePromptExportFlags(t *testing.T) {
 		"dry run":        {PrintPrompt: true, DryRun: true},
 		"output session": {PrintPrompt: true, OutputSession: true},
 		"workflow":       {PrintPrompt: true, Workflow: "wf"},
+		"audio output":   {PrintPrompt: true, Output: "x.wav"},
 	} {
 		if validatePromptExportFlags(flags) == nil {
 			t.Errorf("%s: expected validation error", name)

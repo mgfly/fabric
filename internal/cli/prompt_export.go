@@ -43,6 +43,9 @@ func validatePromptExportFlags(currentFlags *Flags) error {
 	if currentFlags.Workflow != "" {
 		return fmt.Errorf("%s", i18n.T("print_prompt_error_workflow"))
 	}
+	if currentFlags.Output != "" && IsAudioFormat(currentFlags.Output) {
+		return fmt.Errorf(i18n.T("print_prompt_error_audio_output"), currentFlags.Output)
+	}
 	return nil
 }
 

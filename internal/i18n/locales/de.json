@@ -511,6 +511,7 @@
   "print_current_version": "Aktuelle Version ausgeben",
   "print_metadata_to_stderr": "Metadaten (Eingabe-/Ausgabe-Token) auf stderr ausgeben",
   "print_pattern_contents": "Den Inhalt des angegebenen Musters im Terminal ausgeben",
+  "print_prompt_error_audio_output": "`--print-prompt` kann nicht in eine Audiodatei schreiben: %s",
   "print_prompt_error_dry_run": "`--print-prompt` kann nicht zusammen mit `--dry-run` verwendet werden",
   "print_prompt_error_output_session": "`--print-prompt` kann nicht zusammen mit `--output-session` verwendet werden",
   "print_prompt_error_workflow": "`--print-prompt` kann nicht zusammen mit `--workflow` verwendet werden",

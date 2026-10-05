@@ -511,6 +511,7 @@
   "print_current_version": "چاپ نسخه فعلی",
   "print_metadata_to_stderr": "چاپ فراداده (توکن‌های ورودی/خروجی) در stderr",
   "print_pattern_contents": "چاپ محتوای الگوی مشخص‌شده در ترمینال",
+  "print_prompt_error_audio_output": "`--print-prompt` نمی‌تواند در یک فایل صوتی بنویسد: %s",
   "print_prompt_error_dry_run": "`--print-prompt` را نمی‌توان همراه با `--dry-run` استفاده کرد",
   "print_prompt_error_output_session": "`--print-prompt` را نمی‌توان همراه با `--output-session` استفاده کرد",
   "print_prompt_error_workflow": "`--print-prompt` را نمی‌توان همراه با `--workflow` استفاده کرد",

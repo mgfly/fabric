@@ -511,6 +511,7 @@
   "print_current_version": "Imprimir versão atual",
   "print_metadata_to_stderr": "Imprimir metadados (tokens de entrada/saída) no stderr",
   "print_pattern_contents": "Imprimir o conteúdo do padrão indicado no terminal",
+  "print_prompt_error_audio_output": "`--print-prompt` não pode escrever num ficheiro de áudio: %s",
   "print_prompt_error_dry_run": "`--print-prompt` não pode ser utilizado com `--dry-run`",
   "print_prompt_error_output_session": "`--print-prompt` não pode ser utilizado com `--output-session`",
   "print_prompt_error_workflow": "`--print-prompt` não pode ser utilizado com `--workflow`",
