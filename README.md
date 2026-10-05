@@ -368,6 +368,7 @@ Fabric supports a wide range of AI providers:
 - Cerebras
 - Cheaper Inference
 - DeepSeek
+- DemonRoute
 - DigitalOcean
 - Eden AI
 - GrokAI
