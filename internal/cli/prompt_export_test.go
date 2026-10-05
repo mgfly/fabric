@@ -98,6 +98,12 @@ func TestRenderPromptExport(t *testing.T) {
 			if len(printed) != 0 {
 				t.Fatalf("expected no stdout output, got %q", printed)
 			}
+			// The export must not write a session file.
+			if tt.flags.Session != "" && tt.history == nil {
+				if _, err := os.Stat(filepath.Join(db.Sessions.Dir, tt.flags.Session+".json")); !os.IsNotExist(err) {
+					t.Fatalf("expected no session file, got err %v", err)
+				}
+			}
 		})
 	}
 }
