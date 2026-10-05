@@ -21,6 +21,7 @@ type mockVendor struct {
 	sendStreamError error
 	streamChunks    []domain.StreamUpdate
 	sendFunc        func(context.Context, []*chat.ChatCompletionMessage, *domain.ChatOptions) (string, error)
+	rawModel        string
 }
 
 func (m *mockVendor) GetName() string {
@@ -69,7 +70,20 @@ func (m *mockVendor) Send(ctx context.Context, messages []*chat.ChatCompletionMe
 }
 
 func (m *mockVendor) NeedsRawMode(modelName string) bool {
-	return false
+	return m.rawModel != "" && modelName == m.rawModel
+}
+
+func TestChatter_NeedsRawMode(t *testing.T) {
+	if NewChatter(nil).NeedsRawMode() {
+		t.Error("expected false for a chatter without a vendor")
+	}
+	vendor := &mockVendor{rawModel: "raw-model"}
+	if !(&Chatter{vendor: vendor, model: "raw-model"}).NeedsRawMode() {
+		t.Error("expected true for a raw-mode model")
+	}
+	if (&Chatter{vendor: vendor, model: "other"}).NeedsRawMode() {
+		t.Error("expected false for a model without raw mode")
+	}
 }
 
 func TestJoinPromptSections(t *testing.T) {

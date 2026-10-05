@@ -29,10 +29,10 @@ func TestRenderPromptExport(t *testing.T) {
 			want:    "User:\nPATTERN\nuser input\n\n",
 		},
 		{
-			name:    "raw pattern",
-			flags:   Flags{Pattern: "p", Message: "user input", Raw: true},
-			pattern: "PATTERN\n{{input}}",
-			want:    "User:\nPATTERN\nuser input\n\n",
+			name:    "raw merges system into user",
+			flags:   Flags{Context: "c", Message: "user input", Raw: true},
+			context: "CONTEXT",
+			want:    "User:\nCONTEXT\nuser input\n\n",
 		},
 		{
 			name:    "context and user",

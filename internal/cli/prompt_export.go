@@ -62,7 +62,17 @@ func renderPromptExport(
 		chatReq.Language = registry.Language.DefaultLanguage.Value
 	}
 
-	session, err := core.NewChatter(registry.Db).BuildSession(chatReq, currentFlags.Raw, false)
+	// Resolve the vendor only for a named model, as Send does. Without a model, the export
+	// makes no network call and shows the non-raw structure unless --raw is set.
+	chatter := core.NewChatter(registry.Db)
+	if applyPatternModel(&flagsCopy); flagsCopy.Model != "" {
+		if chatter, err = registry.GetChatter(flagsCopy.Model, flagsCopy.ModelContextLength,
+			flagsCopy.Vendor, false, false); err != nil {
+			return "", err
+		}
+	}
+
+	session, err := chatter.BuildSession(chatReq, flagsCopy.Raw || chatter.NeedsRawMode(), false)
 	if err != nil {
 		return "", err
 	}

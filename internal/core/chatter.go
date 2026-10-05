@@ -61,10 +61,15 @@ func joinPromptSections(parts ...string) string {
 	return strings.Join(sections, "\n")
 }
 
+// NeedsRawMode tells if the vendor needs raw mode for the model.
+// It tests o.model, not opts.Model. GetChatter sets o.model to the vendor's spelling of the name.
+func (o *Chatter) NeedsRawMode() bool {
+	return o.vendor != nil && o.vendor.NeedsRawMode(o.model)
+}
+
 // Send processes a chat request and applies file changes for create_coding_feature pattern
 func (o *Chatter) Send(ctx context.Context, request *domain.ChatRequest, opts *domain.ChatOptions) (session *fsdb.Session, err error) {
-	// Test o.model, not opts.Model. GetChatter set o.model to the vendor's spelling of the name.
-	if o.vendor.NeedsRawMode(o.model) {
+	if o.NeedsRawMode() {
 		opts.Raw = true
 	}
 	if session, err = o.BuildSession(request, opts.Raw, true); err != nil {
