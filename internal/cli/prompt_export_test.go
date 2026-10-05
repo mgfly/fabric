@@ -91,7 +91,7 @@ func TestRenderPromptExportPattern(t *testing.T) {
 		t.Fatalf("renderPromptExport() error = %v", err)
 	}
 
-	want := "System:\nPATTERN\nuser input\n\n"
+	want := "User:\nPATTERN\nuser input\n\n"
 	if got != want {
 		t.Fatalf("renderPromptExport() = %q, want %q", got, want)
 	}
@@ -214,7 +214,7 @@ func TestRenderPromptExportConsumesToolInput(t *testing.T) {
 		t.Fatalf("renderPromptExport() error = %v", err)
 	}
 
-	want := "System:\nPATTERN\ntool data\n\n"
+	want := "User:\nPATTERN\ntool data\n\n"
 	if got != want {
 		t.Fatalf("renderPromptExport() = %q, want %q", got, want)
 	}

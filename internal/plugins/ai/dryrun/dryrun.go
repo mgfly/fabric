@@ -84,7 +84,6 @@ func (c *Client) SendStream(_ context.Context, msgs []*chat.ChatCompletionMessag
 		Type:    domain.StreamTypeContent,
 		Content: DryRunResponse,
 	}
-	// Simulated usage
 	channel <- domain.StreamUpdate{
 		Type: domain.StreamTypeUsage,
 		Usage: &domain.UsageMetadata{
@@ -107,5 +106,5 @@ func (c *Client) Setup() error {
 }
 
 func (c *Client) SetupFillEnvFileContent(_ *bytes.Buffer) {
-	// No environment variables needed for dry run
+	// The dry run vendor uses no environment variables.
 }

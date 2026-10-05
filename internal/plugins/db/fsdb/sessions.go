@@ -17,6 +17,12 @@ func (o *SessionsEntity) Get(name string) (session *Session, err error) {
 }
 
 func (o *SessionsEntity) GetWithNotice(name string, announceNewSession bool) (session *Session, err error) {
+	// Reject invalid names here. Exists reports false for them, and the
+	// missing-session branch then answers with a new empty session and
+	// no error.
+	if err = ValidateStorageName(name); err != nil {
+		return nil, err
+	}
 	session = &Session{Name: name}
 
 	if o.Exists(name) {
