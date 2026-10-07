@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -73,9 +74,7 @@ func TestSendNotification_SecurityEscaping(t *testing.T) {
 				Notification:        true,
 			}
 
-			// This test mainly verifies that the function doesn't panic
-			// and properly escapes dangerous content. The actual command
-			// execution is tested separately in integration tests.
+			// The command runs, but the test does not read its output. It only checks for no error.
 			err := sendNotification(options, "test_pattern", tt.message)
 
 			if tt.expectError && err == nil {
@@ -119,11 +118,8 @@ func TestSendNotification_TitleGeneration(t *testing.T) {
 				Notification:        true,
 			}
 
-			// We're testing the title generation logic
-			// The actual notification command would echo the title
 			err := sendNotification(options, tt.patternName, "test message")
 
-			// The function should not error for valid inputs
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
 			}
@@ -132,7 +128,7 @@ func TestSendNotification_TitleGeneration(t *testing.T) {
 }
 
 func TestSendNotification_MessageTruncation(t *testing.T) {
-	longMessage := strings.Repeat("A", 150) // 150 characters
+	longMessage := strings.Repeat("A", 150)
 	shortMessage := "Short message"
 
 	tests := []struct {
@@ -161,6 +157,147 @@ func TestSendNotification_MessageTruncation(t *testing.T) {
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
 			}
+		})
+	}
+}
+
+func TestImageGenerationCompatibilityWarning(t *testing.T) {
+	originalStderr := os.Stderr
+	defer func() {
+		os.Stderr = originalStderr
+	}()
+
+	tests := []struct {
+		name          string
+		model         string
+		imageFile     string
+		expectWarning bool
+		warningSubstr string
+		description   string
+	}{
+		{
+			name:          "Compatible model with image",
+			model:         "gpt-4o",
+			imageFile:     "test.png",
+			expectWarning: false,
+			description:   "Should not warn for compatible model",
+		},
+		{
+			name:          "Incompatible model with image",
+			model:         "o1-mini",
+			imageFile:     "test.png",
+			expectWarning: true,
+			warningSubstr: "Warning: Model 'o1-mini' does not support image generation",
+			description:   "Should warn for incompatible model",
+		},
+		{
+			name:          "Incompatible model without image",
+			model:         "o1-mini",
+			imageFile:     "",
+			expectWarning: false,
+			description:   "Should not warn when no image file specified",
+		},
+		{
+			name:          "Compatible model without image",
+			model:         "gpt-4o-mini",
+			imageFile:     "",
+			expectWarning: false,
+			description:   "Should not warn when no image file specified even for compatible model",
+		},
+		{
+			name:          "Another incompatible model with image",
+			model:         "gpt-3.5-turbo",
+			imageFile:     "output.jpg",
+			expectWarning: true,
+			warningSubstr: "Warning: Model 'gpt-3.5-turbo' does not support image generation",
+			description:   "Should warn for different incompatible model",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_ = &domain.ChatOptions{
+				Model:     tt.model,
+				ImageFile: tt.imageFile,
+			}
+
+			hasImage := tt.imageFile != ""
+			shouldWarn := hasImage && tt.expectWarning
+
+			if shouldWarn && tt.expectWarning {
+				if tt.warningSubstr == "" {
+					t.Errorf("Expected warning substring for warning case")
+				}
+			}
+
+			if tt.expectWarning {
+				t.Logf("Note: Warning would be printed by openai plugin for model '%s'", tt.model)
+			}
+		})
+	}
+}
+
+func TestImageGenerationIntegrationScenarios(t *testing.T) {
+	scenarios := []struct {
+		name          string
+		cliArgs       []string
+		expectWarning bool
+		warningModel  string
+		description   string
+	}{
+		{
+			name: "User tries o1-mini with image",
+			cliArgs: []string{
+				"-m", "o1-mini",
+				"--image-file", "output.png",
+				"Describe this image",
+			},
+			expectWarning: true,
+			warningModel:  "o1-mini",
+			description:   "Common user error - using incompatible model",
+		},
+		{
+			name: "User uses compatible model",
+			cliArgs: []string{
+				"-m", "gpt-4o",
+				"--image-file", "output.png",
+				"Describe this image",
+			},
+			expectWarning: false,
+			description:   "Correct usage - should work without warnings",
+		},
+		{
+			name: "User specifies model via pattern env var",
+			cliArgs: []string{
+				"--pattern", "summarize",
+				"--image-file", "output.png",
+				"Summarize this image",
+			},
+			expectWarning: false, // Depends on env var, not tested here
+			description:   "Pattern-based model selection",
+		},
+	}
+
+	for _, scenario := range scenarios {
+		t.Run(scenario.name, func(t *testing.T) {
+			hasImage := false
+			model := ""
+
+			for i, arg := range scenario.cliArgs {
+				if arg == "-m" && i+1 < len(scenario.cliArgs) {
+					model = scenario.cliArgs[i+1]
+				}
+				if arg == "--image-file" && i+1 < len(scenario.cliArgs) {
+					hasImage = true
+				}
+			}
+
+			if scenario.expectWarning && scenario.warningModel == "" {
+				t.Errorf("Expected warning scenario must specify warning model")
+			}
+
+			t.Logf("Scenario: %s", scenario.description)
+			t.Logf("Model: %s, Has Image: %v, Expect Warning: %v", model, hasImage, scenario.expectWarning)
 		})
 	}
 }

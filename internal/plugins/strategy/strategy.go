@@ -2,6 +2,7 @@ package strategy
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/danielmiessler/fabric/internal/i18n"
 	"github.com/danielmiessler/fabric/internal/plugins"
 	"github.com/danielmiessler/fabric/internal/tools/githelper"
 )
@@ -20,24 +22,24 @@ func NewStrategiesManager() (sm *StrategiesManager) {
 	label := "Prompt Strategies"
 	strategies, err := LoadAllFiles()
 	if err != nil {
-		strategies = make(map[string]Strategy) // empty map
+		strategies = make(map[string]Strategy)
 	}
 	sm = &StrategiesManager{
 		Strategies: strategies,
 	}
 	sm.PluginBase = &plugins.PluginBase{
-		Name:             label,
-		SetupDescription: "Strategies - Downloads Prompting Strategies (like chain of thought) [required]",
+		Name:             i18n.T("strategies_label"),
+		SetupDescription: i18n.T("strategies_setup_description") + " " + i18n.T("required_marker"),
 		EnvNamePrefix:    plugins.BuildEnvVariablePrefix(label),
 		ConfigureCustom:  sm.configure,
 	}
 
-	sm.DefaultGitRepoUrl = sm.AddSetupQuestionCustom("Git Repo Url", true,
-		"Enter the default Git repository URL for the strategies")
+	sm.DefaultGitRepoUrl = sm.AddSetupQuestionWithEnvName("Git Repo Url", true,
+		i18n.T("strategies_git_repo_url_question"))
 	sm.DefaultGitRepoUrl.Value = DefaultStrategiesGitRepoUrl
 
-	sm.DefaultFolder = sm.AddSetupQuestionCustom("Git Repo Strategies Folder", true,
-		"Enter the default folder in the Git repository where strategies are stored")
+	sm.DefaultFolder = sm.AddSetupQuestionWithEnvName("Git Repo Strategies Folder", true,
+		i18n.T("strategies_git_repo_folder_question"))
 	sm.DefaultFolder.Value = DefaultStrategiesGitRepoFolder
 
 	return
@@ -103,34 +105,39 @@ func (sm *StrategiesManager) Setup() (err error) {
 	if err = sm.PopulateDB(); err != nil {
 		return
 	}
+	// Reload strategies after download. IsConfigured() uses this new list.
+	sm.Strategies, _ = LoadAllFiles()
 	return
 }
 
 // PopulateDB downloads strategies from the internet and populates the strategies folder
 func (sm *StrategiesManager) PopulateDB() (err error) {
-	stageDir, _ := getStrategyDir()
-	fmt.Printf("Downloading strategies and Populating %s...\n", stageDir)
+	strategyDir, _ := getStrategyDir()
+	fmt.Printf(i18n.T("strategies_downloading"), strategyDir)
+	fmt.Println()
 	fmt.Println()
 	if err = sm.gitCloneAndCopy(); err != nil {
 		return
 	}
+
+	fmt.Printf(i18n.T("strategies_download_success"), strategyDir)
 	return
 }
 
 func (sm *StrategiesManager) gitCloneAndCopy() (err error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		err = fmt.Errorf("could not get home directory: %v", err)
+		err = fmt.Errorf(i18n.T("strategies_home_dir_error"), err)
 		return
 	}
 	strategyDir := filepath.Join(homeDir, ".config", "fabric", "strategies")
 
-	// Create the directory if it doesn't exist
 	if err = os.MkdirAll(strategyDir, os.ModePerm); err != nil {
-		return fmt.Errorf("failed to create strategies directory: %w", err)
+		return fmt.Errorf(i18n.T("strategies_failed_create_directory"), err)
 	}
 
-	// Use the helper to fetch files
+	fmt.Printf(i18n.T("strategies_cloning_repository"), sm.DefaultGitRepoUrl.Value, sm.DefaultFolder.Value)
+
 	err = githelper.FetchFilesFromRepo(githelper.FetchOptions{
 		RepoURL:         sm.DefaultGitRepoUrl.Value,
 		PathPrefix:      sm.DefaultFolder.Value,
@@ -138,7 +145,18 @@ func (sm *StrategiesManager) gitCloneAndCopy() (err error) {
 		SingleDirectory: true,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to download strategies: %w", err)
+		return fmt.Errorf(i18n.T("strategies_failed_download"), err)
+	}
+
+	entries, readErr := os.ReadDir(strategyDir)
+	if readErr == nil {
+		strategyCount := 0
+		for _, entry := range entries {
+			if !entry.IsDir() && filepath.Ext(entry.Name()) == ".json" {
+				strategyCount++
+			}
+		}
+		fmt.Printf(i18n.T("strategies_downloaded_count"), strategyCount)
 	}
 
 	return nil
@@ -153,14 +171,15 @@ func (sm *StrategiesManager) configure() (err error) {
 func getStrategyDir() (ret string, err error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		err = fmt.Errorf("could not get home directory: %v, using current directory instead", err)
+		err = fmt.Errorf(i18n.T("strategies_home_dir_fallback"), err)
 		ret = filepath.Join(".", "data/strategies")
 		return
 	}
 	return filepath.Join(homeDir, ".config", "fabric", "strategies"), nil
 }
 
-// LoadStrategy loads a strategy from the given name
+// LoadStrategy loads a strategy from the given name.
+// The resolved path is validated to stay within the strategy directory to prevent path traversal.
 func LoadStrategy(filename string) (*Strategy, error) {
 	if filename == "" {
 		return nil, nil
@@ -172,14 +191,19 @@ func LoadStrategy(filename string) (*Strategy, error) {
 		return nil, err
 	}
 
-	// First try with .json extension
 	strategyPath := filepath.Join(strategyDir, filename+".json")
 	if _, err := os.Stat(strategyPath); os.IsNotExist(err) {
-		// Try without extension
 		strategyPath = filepath.Join(strategyDir, filename)
 		if _, err := os.Stat(strategyPath); os.IsNotExist(err) {
-			return nil, fmt.Errorf("strategy %s not found. Please run 'fabric --liststrategies' for list", filename)
+			return nil, fmt.Errorf(i18n.T("strategy_not_found"), filename)
 		}
+	}
+
+	// Prevent path traversal: validate that the resolved path stays within strategyDir.
+	cleanedPath := filepath.Clean(strategyPath)
+	cleanedDir := filepath.Clean(strategyDir) + string(os.PathSeparator)
+	if !strings.HasPrefix(cleanedPath, cleanedDir) {
+		return nil, fmt.Errorf(i18n.T("strategy_path_traversal"), filename)
 	}
 
 	data, err := os.ReadFile(strategyPath)
@@ -199,21 +223,18 @@ func LoadStrategy(filename string) (*Strategy, error) {
 // ListStrategies prints available strategies
 func (sm *StrategiesManager) ListStrategies(shellCompleteList bool) error {
 	if len(sm.Strategies) == 0 {
-		return fmt.Errorf("no strategies found. Please run 'fabric --setup' to download strategies")
+		return errors.New(i18n.T("strategies_none_found"))
 	}
 	if !shellCompleteList {
-		fmt.Print("Available Strategies:\n\n")
+		fmt.Print(i18n.T("strategies_available_header"), "\n\n")
 	}
-	// Get all strategy names for sorting
 	names := []string{}
 	for name := range sm.Strategies {
 		names = append(names, name)
 	}
 
-	// Sort the strategy names alphabetically
 	sort.Strings(names)
 
-	// Find the longest name to align descriptions
 	maxNameLength := 0
 	for _, name := range names {
 		if len(name) > maxNameLength {
@@ -221,7 +242,6 @@ func (sm *StrategiesManager) ListStrategies(shellCompleteList bool) error {
 		}
 	}
 
-	// Print each strategy with its description aligned
 	formatString := "%-" + fmt.Sprintf("%d", maxNameLength+2) + "s %s\n"
 	for _, name := range names {
 		strategy := sm.Strategies[name]

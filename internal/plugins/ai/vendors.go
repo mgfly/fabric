@@ -3,11 +3,13 @@ package ai
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
 	"sync"
 
+	"github.com/danielmiessler/fabric/internal/i18n"
 	"github.com/danielmiessler/fabric/internal/plugins"
 )
 
@@ -25,14 +27,17 @@ type VendorsManager struct {
 	Models        *VendorsModels
 }
 
+// AddVendors registers one or more vendors with the manager.
+// Vendors are stored with lowercase keys to enable case-insensitive lookup.
 func (o *VendorsManager) AddVendors(vendors ...Vendor) {
 	for _, vendor := range vendors {
-		o.VendorsByName[vendor.GetName()] = vendor
+		name := strings.ToLower(vendor.GetName())
+		o.VendorsByName[name] = vendor
 		o.Vendors = append(o.Vendors, vendor)
 	}
 }
 
-func (o *VendorsManager) Clear(vendors ...Vendor) {
+func (o *VendorsManager) Clear() {
 	o.VendorsByName = map[string]Vendor{}
 	o.Vendors = []Vendor{}
 	o.Models = nil
@@ -63,14 +68,15 @@ func (o *VendorsManager) HasVendors() bool {
 	return len(o.Vendors) > 0
 }
 
+// FindByName returns a vendor by name. Lookup is case-insensitive.
+// For example, "OpenAI", "openai", and "OPENAI" all match the same vendor.
 func (o *VendorsManager) FindByName(name string) Vendor {
-	return o.VendorsByName[name]
+	return o.VendorsByName[strings.ToLower(name)]
 }
 
 func (o *VendorsManager) readModels() (err error) {
 	if len(o.Vendors) == 0 {
-
-		err = fmt.Errorf("no AI vendors configured to read models from. Please configure at least one AI vendor")
+		err = errors.New(i18n.T("vendors_no_ai_vendors_configured_read_models"))
 		return
 	}
 
@@ -86,13 +92,11 @@ func (o *VendorsManager) readModels() (err error) {
 		go o.fetchVendorModels(ctx, &wg, vendor, resultsChan)
 	}
 
-	// Wait for all goroutines to finish
 	go func() {
 		wg.Wait()
 		close(resultsChan)
 	}()
 
-	// Collect results
 	for result := range resultsChan {
 		if result.err != nil {
 			fmt.Println(result.vendorName, result.err)
@@ -111,13 +115,11 @@ func (o *VendorsManager) fetchVendorModels(
 
 	defer wg.Done()
 
-	models, err := vendor.ListModels()
+	models, err := vendor.ListModels(ctx)
 	select {
 	case <-ctx.Done():
-		// Context canceled, don't send the result
 		return
 	case resultsChan <- modelResult{vendorName: vendor.GetName(), models: models, err: err}:
-		// Result sent
 	}
 }
 
@@ -133,7 +135,7 @@ func (o *VendorsManager) Setup() (ret map[string]Vendor, err error) {
 func (o *VendorsManager) SetupVendor(vendorName string, configuredVendors map[string]Vendor) (err error) {
 	vendor := o.FindByName(vendorName)
 	if vendor == nil {
-		err = fmt.Errorf("vendor %s not found", vendorName)
+		err = fmt.Errorf("%s", fmt.Sprintf(i18n.T("vendor_not_found"), vendorName))
 		return
 	}
 	o.setupVendorTo(vendor, configuredVendors)
@@ -142,11 +144,11 @@ func (o *VendorsManager) SetupVendor(vendorName string, configuredVendors map[st
 
 func (o *VendorsManager) setupVendorTo(vendor Vendor, configuredVendors map[string]Vendor) {
 	if vendorErr := vendor.Setup(); vendorErr == nil {
-		fmt.Printf("[%v] configured\n", vendor.GetName())
-		configuredVendors[vendor.GetName()] = vendor
+		fmt.Printf("%s\n", fmt.Sprintf(i18n.T("plugin_setup_configured"), vendor.GetName()))
+		configuredVendors[strings.ToLower(vendor.GetName())] = vendor
 	} else {
-		delete(configuredVendors, vendor.GetName())
-		fmt.Printf("[%v] skipped\n", vendor.GetName())
+		delete(configuredVendors, strings.ToLower(vendor.GetName()))
+		fmt.Printf("%s", fmt.Sprintf(i18n.T("plugin_setup_skipped"), vendor.GetName()))
 	}
 }
 
